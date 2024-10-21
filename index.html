@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WiFi Scanner</title>
+
+    </head>
+    <body>
+        <div class="container">
+            <h1>WiFi Networks</h1>
+            <div class="wifi">
+                <table class="wifi-table">
+                    <thead>
+                        <tr>
+                            <th>SSID (WiFi Name)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wifi-list">
+                        <!-- Các mạng WiFi sẽ được hiển thị ở đây -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="password" id="password-form" style="display:none;">
+                <div class="overlay"></div>
+                <div class="form-container">
+                    <h2>Enter Password for <span id="selected-ssid"></span></h2>
+                    <form id="wifi-password-form">
+                        <input type="hidden" id="selected-wifi" name="ssid" value="">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" style="height: 20px;" required>
+                        <button class="connect" type="submit">Connect</button>
+                        <button class="cancel" type="button" onclick="closePasswordForm()">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            height: 100%;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            text-align: center;
+            font-size: 30px;
+        }
+        .wifi-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .wifi-table td, .wifi-table th {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        .wifi-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .wifi-table th {
+            background-color: #2555AA;
+            color: white;
+            text-align: center;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+        .form-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 10px 20px 20px 20px;;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex; /* Sử dụng flexbox */
+            flex-direction: column; /* Đặt hướng xếp dọc */
+            align-items: center;
+        }
+        .form-container h2 {
+            margin-bottom: 20px;
+        }
+        .connect, .cancel {
+            width: 50%;
+            padding: 5px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .connect {
+            margin: 20px;
+        }
+    </style>
+    <script>
+        function addWiFiRow(ssid) {
+            let tableBody = document.getElementById("wifi-list");
+            let row = document.createElement("tr");
+            let cell1 = document.createElement("td");
+            cell1.textContent = ssid;
+
+            let cell2 = document.createElement("td");
+            let button = document.createElement("button");
+            button.textContent = "Connect";
+            button.onclick = function() {
+                document.getElementById("selected-ssid").textContent = ssid; // Hiển thị SSID đã chọn
+                document.getElementById("selected-wifi").value = ssid; // Gán SSID đã chọn
+                document.getElementById("password-form").style.display = "block"; // Hiện form nhập mật khẩu
+            };
+
+            cell2.appendChild(button);
+            row.appendChild(cell1);
+            row.appendChild(cell2);
+            tableBody.appendChild(row);
+        }
+
+        // Cập nhật danh sách WiFi từ server
+        function updateWiFiList() {
+            fetch('/scan')
+                .then(response => response.json())
+                .then(data => {
+                    // Làm sạch danh sách cũ
+                    document.getElementById("wifi-list").innerHTML = '';
+                    data.forEach(function(wifi) {
+                        addWiFiRow(wifi.ssid); // Thêm dòng cho mỗi mạng WiFi
+                    });
+                });
+        }
+
+        // Gọi hàm này khi trang tải
+        window.onload = function() {
+            updateWiFiList(); // Cập nhật danh sách WiFi ngay khi tải trang
+
+            // Cập nhật danh sách mỗi 5 giây
+            setInterval(updateWiFiList, 5000);
+        };
+
+        document.getElementById("wifi-password-form").onsubmit = function(event) {
+            event.preventDefault();
+            const ssid = document.getElementById("selected-wifi").value;
+            const password = document.getElementById("password").value;
+        
+            alert("Đã gửi yêu cầu tới server...");
+        
+            closePasswordForm();
+            document.getElementById("selected-wifi").value = "";
+            document.getElementById("password").value = "";
+        
+            fetch(`/connect?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`)
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                });
+        };
+
+        function closePasswordForm() {
+            document.getElementById("password-form").style.display = "none";      
+            document.getElementById("password").value = "";        
+            document.getElementById("selected-wifi").value = "";
+        }
+    </script>
+</html>
